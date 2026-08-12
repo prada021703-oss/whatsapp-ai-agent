@@ -1,0 +1,10 @@
+[
+  {
+    "role": "user",
+    "content": "Hola Meta y Anthropic"
+  },
+  {
+    "role": "assistant",
+    "content": "[Modo Demostración] Recibí tu mensaje: \"Hola Meta y Anthropic\". Configura tu OPENAI_API_KEY en .env para respuestas reales del modelo claude-3-5-sonnet."
+  }
+]
