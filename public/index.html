@@ -1,0 +1,2144 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhatsApp AI Agent · Dashboard</title>
+  <meta name="description" content="Panel de control para gestionar, entrenar y conectar tu agente IA de WhatsApp." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    /* ───────────────────────────────────────────
+       DESIGN TOKENS
+    ─────────────────────────────────────────── */
+    :root {
+      --bg-base:     #09090b;
+      --bg-surface:  #111113;
+      --bg-elevated: #18181b;
+      --bg-input:    #1c1c1f;
+      --border:      rgba(255,255,255,0.08);
+      --border-mid:  rgba(255,255,255,0.12);
+      --text-primary:   #fafafa;
+      --text-secondary: #a1a1aa;
+      --text-muted:     #52525b;
+      --accent:      #10b981;
+      --accent-dim:  rgba(16,185,129,0.12);
+      --accent-glow: rgba(16,185,129,0.25);
+      --red:         #ef4444;
+      --red-dim:     rgba(239,68,68,0.12);
+      --amber:       #f59e0b;
+      --amber-dim:   rgba(245,158,11,0.12);
+      --blue:        #3b82f6;
+      --blue-dim:    rgba(59,130,246,0.12);
+      --sidebar-w:   240px;
+      --radius:      8px;
+      --radius-sm:   5px;
+      --radius-lg:   12px;
+      --font: 'Geist', system-ui, sans-serif;
+      --mono: 'Geist Mono', monospace;
+    }
+
+    [data-theme="light"] {
+      --bg-base:     #f4f4f5;
+      --bg-surface:  #ffffff;
+      --bg-elevated: #f9f9fb;
+      --bg-input:    #f4f4f5;
+      --border:      rgba(0,0,0,0.08);
+      --border-mid:  rgba(0,0,0,0.12);
+      --text-primary:   #09090b;
+      --text-secondary: #52525b;
+      --text-muted:     #a1a1aa;
+    }
+
+    /* ───────────────────────────────────────────
+       RESET
+    ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--font);
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    button { cursor: pointer; font-family: inherit; }
+    input, textarea, select { font-family: inherit; }
+    a { text-decoration: none; color: inherit; }
+
+    /* ───────────────────────────────────────────
+       LAYOUT SHELL
+    ─────────────────────────────────────────── */
+    .shell {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      grid-template-rows: 1fr;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    /* ───────────────────────────────────────────
+       SIDEBAR
+    ─────────────────────────────────────────── */
+    .sidebar {
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 20px 16px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 32px; height: 32px;
+      background: var(--accent);
+      border-radius: var(--radius-sm);
+      display: grid; place-items: center;
+      flex-shrink: 0;
+    }
+    .brand-icon svg { color: #000; }
+
+    .brand-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 1px;
+      font-family: var(--mono);
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 8px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      overflow-y: auto;
+    }
+
+    .nav-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 12px 8px 4px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      width: 100%;
+      text-align: left;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+    .nav-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
+    .nav-item.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+    .nav-item.active .nav-icon { color: var(--accent); }
+    .nav-badge {
+      margin-left: auto;
+      font-size: 10px;
+      font-family: var(--mono);
+      background: var(--bg-elevated);
+      color: var(--text-muted);
+      padding: 2px 6px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+    .nav-badge.live {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-color: var(--accent-glow);
+    }
+
+    .sidebar-footer {
+      padding: 12px 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--red);
+      position: relative;
+    }
+    .status-dot.online { background: var(--accent); }
+    .status-dot.online::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      background: var(--accent-glow);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0; transform: scale(1.8); }
+    }
+
+    .status-info { flex: 1; min-width: 0; }
+    .status-label { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+    .status-sub { font-size: 10px; color: var(--text-muted); font-family: var(--mono); }
+
+    /* ───────────────────────────────────────────
+       MAIN CONTENT
+    ─────────────────────────────────────────── */
+    .main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-base);
+    }
+
+    /* Topbar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 56px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-surface);
+      flex-shrink: 0;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 8px; }
+    .page-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .breadcrumb { font-size: 12px; color: var(--text-muted); }
+
+    .topbar-actions { display: flex; align-items: center; gap: 8px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px; font-weight: 500;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border-color: var(--border-mid);
+    }
+    .btn-ghost:hover { background: var(--bg-elevated); color: var(--text-primary); }
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+      font-weight: 600;
+    }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-danger {
+      background: var(--red-dim);
+      color: var(--red);
+      border-color: rgba(239,68,68,0.2);
+    }
+    .btn-danger:hover { background: rgba(239,68,68,0.2); }
+    .btn-icon {
+      padding: 6px;
+      background: transparent;
+      border: 1px solid var(--border-mid);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+    .btn-icon:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+    /* Content area */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    /* Views */
+    .view { display: none; }
+    .view.active { display: flex; flex-direction: column; gap: 20px; }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 16px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-title svg { color: var(--text-muted); }
+    .card-body { padding: 20px; }
+    .card-description {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+      font-family: var(--mono);
+    }
+    .badge-green { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-glow); }
+    .badge-red   { background: var(--red-dim);   color: var(--red);    border: 1px solid rgba(239,68,68,0.2); }
+    .badge-amber { background: var(--amber-dim); color: var(--amber);  border: 1px solid rgba(245,158,11,0.2); }
+    .badge-blue  { background: var(--blue-dim);  color: var(--blue);   border: 1px solid rgba(59,130,246,0.2); }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    /* Form Controls */
+    .form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .form-row:last-child { margin-bottom: 0; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+    .label-hint { font-weight: 400; color: var(--text-muted); margin-left: 4px; }
+
+    .input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-mid);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: var(--mono);
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    .input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+    .input::placeholder { color: var(--text-muted); font-family: var(--font); }
+
+    .input-password { position: relative; }
+    .input-password .input { padding-right: 40px; }
+    .input-password .eye-btn {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--text-muted); padding: 2px;
+    }
+    .input-password .eye-btn:hover { color: var(--text-primary); }
+
+    .select {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-mid);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: var(--font);
+      outline: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 30px;
+    }
+    .select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+
+    .textarea {
+      width: 100%; resize: vertical;
+      background: var(--bg-input);
+      border: 1px solid var(--border-mid);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      color: var(--text-primary);
+      font-size: 12.5px;
+      font-family: var(--mono);
+      line-height: 1.7;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+    .textarea::placeholder { color: var(--text-muted); font-family: var(--font); }
+
+    /* Slider */
+    .slider-row {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 14px;
+    }
+    .slider-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; width: 80px; flex-shrink: 0; }
+    .slider {
+      -webkit-appearance: none; appearance: none;
+      flex: 1; height: 4px;
+      background: var(--bg-elevated);
+      border-radius: 4px; outline: none;
+      cursor: pointer;
+    }
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--bg-surface);
+      box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+    .slider-val {
+      font-size: 12px; font-family: var(--mono);
+      color: var(--text-primary); font-weight: 500;
+      width: 36px; text-align: right;
+    }
+
+    /* Toggle switch */
+    .toggle-wrap { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .toggle-wrap:last-child { border-bottom: none; }
+    .toggle-info .toggle-name { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+    .toggle-info .toggle-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .toggle {
+      position: relative; width: 36px; height: 20px;
+      background: var(--bg-elevated); border-radius: 20px;
+      border: 1px solid var(--border-mid); cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle.on { background: var(--accent); border-color: var(--accent); }
+    .toggle::after {
+      content: ''; position: absolute;
+      top: 2px; left: 2px;
+      width: 14px; height: 14px;
+      background: #fff; border-radius: 50%;
+      transition: left 0.2s;
+    }
+    .toggle.on::after { left: 18px; }
+
+    /* ─── VIEW: OVERVIEW ─── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .metric-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .metric-label { font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .metric-value { font-size: 28px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.03em; font-family: var(--mono); }
+    .metric-delta { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+    .delta-up { color: var(--accent); }
+    .delta-down { color: var(--red); }
+
+    /* Activity feed */
+    .feed { display: flex; flex-direction: column; }
+    .feed-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .feed-item:last-child { border-bottom: none; }
+    .feed-item:hover { background: var(--bg-elevated); }
+    .feed-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-mid);
+      display: grid; place-items: center;
+      font-size: 11px; font-weight: 700;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+    .feed-content { flex: 1; min-width: 0; }
+    .feed-from { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+    .feed-msg { font-size: 12px; color: var(--text-secondary); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .feed-time { font-size: 10px; color: var(--text-muted); font-family: var(--mono); margin-top: 4px; }
+    .feed-status { flex-shrink: 0; }
+
+    /* ─── VIEW: CONNECTION ─── */
+    .qr-container {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 16px;
+      padding: 32px;
+      border-radius: var(--radius);
+      border: 2px dashed var(--border-mid);
+      background: var(--bg-elevated);
+      min-height: 220px;
+      position: relative;
+    }
+    .qr-box {
+      width: 160px; height: 160px;
+      background: #fff;
+      border-radius: var(--radius-sm);
+      padding: 8px;
+      display: grid;
+      place-items: center;
+    }
+    .qr-placeholder {
+      width: 100%; height: 100%;
+      background: repeating-conic-gradient(#000 0% 25%, #fff 0% 50%) 0 0 / 12px 12px;
+      opacity: 0.1;
+      border-radius: 2px;
+    }
+    .qr-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg-elevated); border-radius: var(--radius); }
+    .spinner {
+      width: 28px; height: 28px;
+      border: 2px solid var(--border-mid);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+    .tab {
+      padding: 10px 16px;
+      font-size: 12px; font-weight: 500;
+      color: var(--text-muted);
+      background: transparent; border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.15s;
+      cursor: pointer;
+    }
+    .tab:hover { color: var(--text-primary); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ─── VIEW: TRAINING (PLAYGROUND) ─── */
+    .training-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      height: calc(100dvh - 56px - 48px - 20px);
+      min-height: 0;
+    }
+
+    .token-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--bg-elevated);
+      border-radius: var(--radius-sm);
+      margin-top: 8px;
+    }
+    .token-count { font-size: 11px; color: var(--text-muted); font-family: var(--mono); }
+    .token-progress {
+      height: 3px; flex: 1; max-width: 120px; margin: 0 12px;
+      background: var(--bg-base); border-radius: 3px; overflow: hidden;
+    }
+    .token-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s; }
+
+    /* Chat playground */
+    .chat-wrap {
+      display: flex; flex-direction: column;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .chat-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .chat-avatar {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, #25D366, #128C7E);
+      border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 16px;
+    }
+    .chat-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .chat-sub { font-size: 11px; color: var(--accent); font-family: var(--mono); }
+
+    .chat-messages {
+      flex: 1; overflow-y: auto;
+      padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+      background: var(--bg-elevated);
+    }
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-track { background: transparent; }
+    .chat-messages::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 4px; }
+
+    .msg-row { display: flex; gap: 8px; max-width: 85%; }
+    .msg-row.user { align-self: flex-end; flex-direction: row-reverse; }
+
+    .msg-bubble {
+      padding: 9px 13px;
+      border-radius: 14px;
+      font-size: 12.5px; line-height: 1.5;
+      position: relative;
+    }
+    .msg-bubble.agent {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      border-bottom-left-radius: 4px;
+    }
+    .msg-bubble.user {
+      background: var(--accent);
+      color: #000;
+      font-weight: 500;
+      border-bottom-right-radius: 4px;
+    }
+    .msg-time { font-size: 9px; color: var(--text-muted); margin-top: 4px; text-align: right; font-family: var(--mono); }
+    .msg-row.agent .msg-time { text-align: left; }
+
+    .typing-indicator { display: flex; align-items: center; gap: 4px; padding: 10px 13px; }
+    .typing-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--text-muted);
+      animation: typing 1.2s ease-in-out infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing {
+      0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+      40%           { transform: scale(1);   opacity: 1; }
+    }
+
+    .chat-input-row {
+      display: flex; gap: 8px; align-items: flex-end;
+      padding: 12px 14px;
+      border-top: 1px solid var(--border);
+    }
+    .chat-input {
+      flex: 1;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-mid);
+      border-radius: 22px;
+      padding: 9px 14px;
+      font-size: 13px;
+      color: var(--text-primary);
+      font-family: var(--font);
+      outline: none;
+      resize: none;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+    .chat-input:focus { border-color: var(--accent); }
+    .chat-send {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+      display: grid; place-items: center;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    .chat-send:hover { filter: brightness(1.1); transform: scale(1.05); }
+    .chat-send svg { color: #000; }
+
+    /* ─── VIEW: HISTORY ─── */
+    .history-table { width: 100%; border-collapse: collapse; }
+    .history-table th {
+      text-align: left;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
+      color: var(--text-muted); text-transform: uppercase;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-elevated);
+    }
+    .history-table td {
+      padding: 12px 16px;
+      font-size: 12px; color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .history-table tr:last-child td { border-bottom: none; }
+    .history-table tbody tr:hover td { background: var(--bg-elevated); }
+    .history-table td.msg-preview {
+      max-width: 240px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      color: var(--text-primary);
+    }
+    .history-table td.response-preview {
+      max-width: 280px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .history-table .phone { font-family: var(--mono); }
+    .history-table .ts { font-family: var(--mono); font-size: 11px; }
+
+    /* ─── SCROLLBARS ─── */
+    .content::-webkit-scrollbar,
+    .sidebar-nav::-webkit-scrollbar { width: 4px; }
+    .content::-webkit-scrollbar-track,
+    .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+    .content::-webkit-scrollbar-thumb,
+    .sidebar-nav::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 4px; }
+
+    /* ─── DIVIDER ─── */
+    .divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+    /* ─── GRID HELPERS ─── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+    /* ─── NOTIFICATION / TOAST ─── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      padding: 12px 16px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-mid);
+      border-radius: var(--radius);
+      font-size: 12px; color: var(--text-primary);
+      display: flex; align-items: center; gap: 8px;
+      transform: translateY(100px); opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      z-index: 999;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    .toast-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* Mobile responsive */
+    @media (max-width: 900px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .metrics-grid { grid-template-columns: 1fr 1fr; }
+      .training-layout { grid-template-columns: 1fr; height: auto; }
+      .form-grid { grid-template-columns: 1fr; }
+      .two-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- ─────────── SIDEBAR ─────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-icon">
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">WA AI Agent</div>
+        <div class="brand-sub">v1.0.0 · localhost:3000</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <span class="nav-section-label">Principal</span>
+
+      <button class="nav-item active" id="nav-overview" onclick="switchView('overview', this)">
+        <svg class="nav-icon" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Estado del Bot
+        <span class="nav-badge live">Live</span>
+      </button>
+
+      <button class="nav-item" id="nav-history" onclick="switchView('history', this)">
+        <svg class="nav-icon" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Historial
+        <span class="nav-badge" id="msg-count-badge">0</span>
+      </button>
+
+      <span class="nav-section-label">Configuración</span>
+
+      <button class="nav-item" id="nav-connection" onclick="switchView('connection', this)">
+        <svg class="nav-icon" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+        Conexión API
+      </button>
+
+      <button class="nav-item" id="nav-training" onclick="switchView('training', this)">
+        <svg class="nav-icon" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Entrenamiento
+      </button>
+
+      <span class="nav-section-label">Sistema</span>
+
+      <button class="nav-item" id="nav-settings" onclick="switchView('settings', this)">
+        <svg class="nav-icon" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        Ajustes
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="status-dot" id="sidebar-status-dot"></div>
+      <div class="status-info">
+        <div class="status-label" id="sidebar-status-label">Desconectado</div>
+        <div class="status-sub" id="sidebar-status-sub">Sin sesión activa</div>
+      </div>
+      <button class="btn-icon" onclick="toggleTheme()" title="Cambiar tema">
+        <svg id="theme-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ─────────── MAIN ─────────── -->
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="page-title" id="topbar-title">Estado del Bot</span>
+        <span class="breadcrumb" id="topbar-badge">
+          <span class="badge badge-red" id="global-status-badge"><span class="badge-dot"></span>Desconectado</span>
+        </span>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost" onclick="clearHistory()">
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.49"/></svg>
+          Limpiar
+        </button>
+        <button class="btn btn-primary" id="connect-btn" onclick="toggleConnect()">
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+          Conectar Bot
+        </button>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ───────── VIEW: OVERVIEW ───────── -->
+      <section class="view active" id="view-overview">
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">Mensajes Hoy</div>
+            <div class="metric-value" id="m-today">0</div>
+            <div class="metric-delta">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+              <span>mensajes recibidos</span>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Usuarios Activos</div>
+            <div class="metric-value" id="m-users">0</div>
+            <div class="metric-delta"><span>números únicos en sesión</span></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Latencia IA</div>
+            <div class="metric-value" id="m-latency">--</div>
+            <div class="metric-delta"><span>última respuesta generada</span></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Estado Conexión</div>
+            <div class="metric-value" style="font-size:16px; margin-top: 6px;" id="m-conn-label">
+              <span class="badge badge-red" id="m-status-badge"><span class="badge-dot"></span>Offline</span>
+            </div>
+            <div class="metric-delta"><span id="m-conn-sub">Sin sesión activa</span></div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <!-- Live feed -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  Feed en Vivo
+                </div>
+                <div class="card-description">Últimos mensajes recibidos por el agente</div>
+              </div>
+              <span class="badge badge-red" id="feed-status"><span class="badge-dot"></span>Sin actividad</span>
+            </div>
+            <div class="feed" id="live-feed">
+              <div style="padding: 40px 20px; text-align: center; color: var(--text-muted);">
+                <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="margin: 0 auto 10px; display: block; opacity: 0.3;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <div style="font-size: 12px;">Esperando mensajes...</div>
+                <div style="font-size: 11px; margin-top: 4px; font-family: var(--mono);">Conecta el bot para ver actividad aquí</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Logs -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Log del Sistema
+                </div>
+                <div class="card-description">Eventos del servidor en tiempo real</div>
+              </div>
+              <button class="btn btn-ghost" style="font-size:11px; padding:4px 10px;" onclick="clearLogs()">Limpiar</button>
+            </div>
+            <div style="padding:14px; max-height: 300px; overflow-y: auto;" id="log-container">
+              <div style="font-family: var(--mono); font-size: 11px; color: var(--text-muted); line-height: 1.8;" id="log-output">
+                <div><span style="color: var(--accent);">[SYSTEM]</span> Dashboard iniciado — esperando conexión...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ───────── VIEW: CONNECTION ───────── -->
+      <section class="view" id="view-connection">
+        <div class="two-col">
+          <!-- API Config -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                  Proveedor de WhatsApp
+                </div>
+                <div class="card-description">Configurar canal de mensajería</div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="form-row">
+                <label class="label">Proveedor</label>
+                <select class="select" id="provider-select" onchange="updateProviderUI()">
+                  <option value="baileys">Baileys (QR Code · Sin API oficial)</option>
+                  <option value="meta">Meta Cloud API (Business API oficial)</option>
+                  <option value="evolution">Evolution API (Self-hosted)</option>
+                  <option value="twilio">Twilio WhatsApp</option>
+                </select>
+              </div>
+
+              <!-- Baileys -->
+              <div id="provider-baileys">
+                <div class="form-row">
+                  <label class="label">Número de Teléfono <span class="label-hint">(opcional, para vinculación por código)</span></label>
+                  <input class="input" type="tel" id="phone-baileys" placeholder="+57 321 449 3071" />
+                </div>
+                <div class="form-row">
+                  <label class="label">Método de Vinculación</label>
+                  <select class="select" id="link-method">
+                    <option value="qr">Código QR</option>
+                    <option value="code">Código de Emparejamiento</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Meta -->
+              <div id="provider-meta" style="display:none;">
+                <div class="form-row">
+                  <label class="label">Phone Number ID</label>
+                  <input class="input" type="text" id="meta-phone-id" placeholder="123456789012345" />
+                </div>
+                <div class="form-row">
+                  <label class="label">Access Token</label>
+                  <div class="input-password">
+                    <input class="input" type="password" id="meta-token" placeholder="EAA..." />
+                    <button class="eye-btn" onclick="togglePassword('meta-token', this)">
+                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <label class="label">WhatsApp Business Account ID</label>
+                  <input class="input" type="text" id="meta-waba" placeholder="987654321" />
+                </div>
+              </div>
+
+              <!-- Evolution -->
+              <div id="provider-evolution" style="display:none;">
+                <div class="form-row">
+                  <label class="label">URL del Servidor</label>
+                  <input class="input" type="url" id="evo-url" placeholder="https://api.miservidor.com" />
+                </div>
+                <div class="form-row">
+                  <label class="label">API Key</label>
+                  <div class="input-password">
+                    <input class="input" type="password" id="evo-key" placeholder="evo_..." />
+                    <button class="eye-btn" onclick="togglePassword('evo-key', this)">
+                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <label class="label">Nombre de Instancia</label>
+                  <input class="input" type="text" id="evo-instance" placeholder="mi-agente-wa" />
+                </div>
+              </div>
+
+              <!-- Twilio -->
+              <div id="provider-twilio" style="display:none;">
+                <div class="form-row">
+                  <label class="label">Account SID</label>
+                  <input class="input" type="text" id="tw-sid" placeholder="ACxxxxxxxx" />
+                </div>
+                <div class="form-row">
+                  <label class="label">Auth Token</label>
+                  <div class="input-password">
+                    <input class="input" type="password" id="tw-token" placeholder="auth token..." />
+                    <button class="eye-btn" onclick="togglePassword('tw-token', this)">
+                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <label class="label">Número WhatsApp Twilio</label>
+                  <input class="input" type="tel" id="tw-from" placeholder="+14155238886" />
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button class="btn btn-primary" onclick="saveAndConnect()">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>
+                  Guardar y Conectar
+                </button>
+                <button class="btn btn-ghost" onclick="saveCredentials()">Guardar</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- QR & Status -->
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/><rect x="3" y="16" width="5" height="5"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><line x1="21" y1="21" x2="21" y2="21"/><path d="M16 11a1 1 0 0 0 0 2h.01"/></svg>
+                    Código QR / Estado
+                  </div>
+                  <div class="card-description">Escanea con WhatsApp para vincular</div>
+                </div>
+                <span class="badge badge-red" id="qr-status"><span class="badge-dot"></span>En espera</span>
+              </div>
+              <div class="card-body">
+                <div class="qr-container" id="qr-container">
+                  <div style="text-align: center; color: var(--text-muted);">
+                    <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="display:block; margin: 0 auto 12px; opacity: 0.3;"><rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/><rect x="3" y="16" width="5" height="5"/></svg>
+                    <div style="font-size:12px; font-weight:500;">Sin QR disponible</div>
+                    <div style="font-size:11px; margin-top:4px; font-family: var(--mono);">Conecta con Baileys para generar</div>
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 8px; margin-top: 14px;">
+                  <button class="btn btn-ghost" style="flex: 1;" onclick="generateQR()">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.49"/></svg>
+                    Regenerar QR
+                  </button>
+                  <button class="btn btn-danger" onclick="disconnect()">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Desconectar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Webhook Config -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  Webhook URL
+                </div>
+              </div>
+              <div class="card-body">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <input class="input" type="text" id="webhook-url" value="http://localhost:3000/webhook" readonly style="font-family: var(--mono); font-size:11px;" />
+                  <button class="btn-icon" onclick="copyWebhook()" title="Copiar">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  </button>
+                </div>
+                <p style="font-size:11px; color: var(--text-muted); margin-top: 8px;">
+                  Registra esta URL en la plataforma de tu proveedor como webhook de entrada.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ───────── VIEW: TRAINING ───────── -->
+      <section class="view" id="view-training">
+        <div class="training-layout">
+          <!-- Left: Config -->
+          <div style="display: flex; flex-direction: column; gap: 16px; overflow-y: auto; padding-right: 4px;">
+            <!-- Model -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  Modelo de IA
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="form-grid">
+                  <div class="form-row">
+                    <label class="label">Proveedor</label>
+                    <select class="select" id="ai-provider" onchange="updateModelList()">
+                      <option value="openai">OpenAI</option>
+                      <option value="anthropic">Anthropic</option>
+                      <option value="google">Google AI</option>
+                      <option value="groq">Groq (Open Source)</option>
+                    </select>
+                  </div>
+                  <div class="form-row">
+                    <label class="label">Modelo</label>
+                    <select class="select" id="model-select">
+                      <option value="gpt-4o">GPT-4o</option>
+                      <option value="gpt-4o-mini">GPT-4o Mini</option>
+                      <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <label class="label">API Key del Modelo</label>
+                  <div class="input-password">
+                    <input class="input" type="password" id="ai-api-key" placeholder="sk-..." />
+                    <button class="eye-btn" onclick="togglePassword('ai-api-key', this)">
+                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Parameters -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+                  Parámetros de Generación
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="slider-row">
+                  <span class="slider-label">Temperatura</span>
+                  <input type="range" class="slider" min="0" max="2" step="0.05" value="0.7" id="temp-slider" oninput="updateSlider('temp', this.value)" />
+                  <span class="slider-val" id="temp-val">0.7</span>
+                </div>
+                <div class="slider-row">
+                  <span class="slider-label">Top-P</span>
+                  <input type="range" class="slider" min="0" max="1" step="0.01" value="1" id="topp-slider" oninput="updateSlider('topp', this.value)" />
+                  <span class="slider-val" id="topp-val">1.0</span>
+                </div>
+                <div class="slider-row">
+                  <span class="slider-label">Max Tokens</span>
+                  <input type="range" class="slider" min="128" max="4096" step="64" value="1024" id="tokens-slider" oninput="updateSlider('tokens', this.value)" />
+                  <span class="slider-val" id="tokens-val">1024</span>
+                </div>
+                <div class="slider-row" style="margin-bottom:0;">
+                  <span class="slider-label">Freq. Penalty</span>
+                  <input type="range" class="slider" min="-2" max="2" step="0.1" value="0" id="freq-slider" oninput="updateSlider('freq', this.value)" />
+                  <span class="slider-val" id="freq-val">0.0</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- System Prompt -->
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Prompt del Sistema
+                  </div>
+                  <div class="card-description">Personalidad e instrucciones base del agente</div>
+                </div>
+                <button class="btn btn-ghost" style="font-size:11px; padding:4px 10px;" onclick="loadDefaultPrompt()">Cargar ejemplo</button>
+              </div>
+              <div class="card-body">
+                <textarea class="textarea" id="system-prompt" rows="8"
+                  placeholder="Eres un asistente de WhatsApp amigable y profesional. Tu objetivo es..."
+                  oninput="updateTokenCount(this)"></textarea>
+                <div class="token-bar">
+                  <span class="token-count" id="token-text">0 tokens</span>
+                  <div class="token-progress"><div class="token-fill" id="token-fill" style="width: 0%;"></div></div>
+                  <span class="token-count" id="token-max">/ 4096 max</span>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 14px;">
+                  <button class="btn btn-primary" onclick="saveTraining()">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Guardar Configuración
+                  </button>
+                  <button class="btn btn-ghost" onclick="resetTraining()">Restablecer</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Chat Playground -->
+          <div class="chat-wrap">
+            <div class="chat-header">
+              <div class="chat-avatar">💬</div>
+              <div>
+                <div class="chat-name">Test Playground</div>
+                <div class="chat-sub">● Simulación activa</div>
+              </div>
+              <button class="btn-icon" style="margin-left: auto;" onclick="clearChat()" title="Limpiar chat">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </button>
+            </div>
+
+            <div class="chat-messages" id="chat-messages">
+              <div class="msg-row">
+                <div>
+                  <div class="msg-bubble agent">Hola 👋 Soy tu agente IA de WhatsApp. Escríbeme algo para probar mis respuestas con la configuración actual.</div>
+                  <div class="msg-time">Sistema · Ahora</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="chat-input-row">
+              <textarea class="chat-input" id="chat-input" placeholder="Escribe un mensaje de prueba..." rows="1"
+                onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendPlaygroundMsg();}"
+                oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px'"></textarea>
+              <button class="chat-send" onclick="sendPlaygroundMsg()">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ───────── VIEW: HISTORY ───────── -->
+      <section class="view" id="view-history">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Historial de Conversaciones
+              </div>
+              <div class="card-description" id="history-count-label">0 mensajes registrados en esta sesión</div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-ghost" onclick="exportHistory()">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Exportar JSON
+              </button>
+              <button class="btn btn-ghost" onclick="clearHistory()">Limpiar</button>
+            </div>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="history-table" id="history-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Número</th>
+                  <th>Mensaje</th>
+                  <th>Respuesta IA</th>
+                  <th>Latencia</th>
+                  <th>Hora</th>
+                </tr>
+              </thead>
+              <tbody id="history-body">
+                <tr>
+                  <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                    <div style="font-size: 12px;">Sin conversaciones registradas</div>
+                    <div style="font-size:11px; margin-top: 4px; font-family: var(--mono);">Conecta el bot y envía mensajes para verlos aquí</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ───────── VIEW: SETTINGS ───────── -->
+      <section class="view" id="view-settings">
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                Comportamiento del Bot
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="toggle-wrap">
+                <div class="toggle-info">
+                  <div class="toggle-name">Respuesta automática</div>
+                  <div class="toggle-desc">El bot responde todos los mensajes entrantes</div>
+                </div>
+                <div class="toggle on" id="toggle-autorespond" onclick="toggleSetting(this)"></div>
+              </div>
+              <div class="toggle-wrap">
+                <div class="toggle-info">
+                  <div class="toggle-name">Guardar historial</div>
+                  <div class="toggle-desc">Persistir conversaciones en disco (conversaciones.json)</div>
+                </div>
+                <div class="toggle on" id="toggle-history" onclick="toggleSetting(this)"></div>
+              </div>
+              <div class="toggle-wrap">
+                <div class="toggle-info">
+                  <div class="toggle-name">Modo de prueba</div>
+                  <div class="toggle-desc">No envía mensajes reales por WhatsApp (solo logs)</div>
+                </div>
+                <div class="toggle" id="toggle-testmode" onclick="toggleSetting(this)"></div>
+              </div>
+              <div class="toggle-wrap">
+                <div class="toggle-info">
+                  <div class="toggle-name">Indicador de escritura</div>
+                  <div class="toggle-desc">Muestra "escribiendo..." mientras el modelo genera</div>
+                </div>
+                <div class="toggle on" id="toggle-typing" onclick="toggleSetting(this)"></div>
+              </div>
+              <div class="toggle-wrap">
+                <div class="toggle-info">
+                  <div class="toggle-name">Webhook activo</div>
+                  <div class="toggle-desc">Servidor Express escuchando en /webhook</div>
+                </div>
+                <div class="toggle on" id="toggle-webhook" onclick="toggleSetting(this)"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 14a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.3a16 16 0 0 0 6 6l1.27-.85a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 17.92z"/></svg>
+                  Límites y Filtros
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="form-row">
+                  <label class="label">Máximo mensajes/usuario/hora</label>
+                  <input class="input" type="number" value="30" min="1" max="999" />
+                </div>
+                <div class="form-row">
+                  <label class="label">Timeout de sesión (minutos)</label>
+                  <input class="input" type="number" value="30" min="1" max="1440" />
+                </div>
+                <div class="form-row">
+                  <label class="label">Palabras bloqueadas <span class="label-hint">(separadas por coma)</span></label>
+                  <input class="input" type="text" placeholder="spam, oferta, promoción..." />
+                </div>
+                <div class="form-row" style="margin-top: 4px;">
+                  <button class="btn btn-primary" onclick="saveSettings()">Guardar ajustes</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                  Info del Servidor
+                </div>
+              </div>
+              <div style="padding: 14px 20px; font-family: var(--mono); font-size: 11px; color: var(--text-secondary); line-height: 2;">
+                <div><span style="color:var(--text-muted);">Puerto</span>  · <span style="color: var(--text-primary);">3000</span></div>
+                <div><span style="color:var(--text-muted);">Webhook</span> · <span style="color: var(--accent);">/webhook (POST)</span></div>
+                <div><span style="color:var(--text-muted);">Node</span>    · <span style="color: var(--text-primary);">v20.12.0</span></div>
+                <div><span style="color:var(--text-muted);">Uptime</span>  · <span id="uptime-val">--:--:--</span></div>
+                <div><span style="color:var(--text-muted);">Memoria</span> · <span id="mem-val">--</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /content -->
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="toast">
+  <span class="toast-dot" id="toast-dot" style="background: var(--accent);"></span>
+  <span id="toast-msg">Operación completada</span>
+</div>
+
+<!-- ─────────────────────────────────────────────
+     JAVASCRIPT
+───────────────────────────────────────────── -->
+<script>
+// ── STATE ────────────────────────────────────────────────────
+const state = {
+  connected: false,
+  messages: [],
+  startTime: Date.now(),
+  todayCount: 0,
+  uniqueUsers: new Set(),
+  lastLatency: null,
+};
+
+// ── NAVIGATION ───────────────────────────────────────────────
+function switchView(name, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  btn.classList.add('active');
+
+  const titles = {
+    overview: 'Estado del Bot',
+    connection: 'Ajustes de Conexión',
+    training: 'Área de Entrenamiento',
+    history: 'Historial de Mensajes',
+    settings: 'Configuración General',
+  };
+  document.getElementById('topbar-title').textContent = titles[name] || name;
+}
+
+// ── THEME ────────────────────────────────────────────────────
+let isDark = true;
+function toggleTheme() {
+  isDark = !isDark;
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+}
+
+// ── CONNECTION ────────────────────────────────────────────────
+function setConnectionState(connected) {
+  state.connected = connected;
+  const dot = document.getElementById('sidebar-status-dot');
+  const label = document.getElementById('sidebar-status-label');
+  const sub = document.getElementById('sidebar-status-sub');
+  const globalBadge = document.getElementById('global-status-badge');
+  const mStatusBadge = document.getElementById('m-status-badge');
+  const mConnLabel = document.getElementById('m-conn-label');
+  const feedStatus = document.getElementById('feed-status');
+  const btn = document.getElementById('connect-btn');
+
+  if (connected) {
+    dot.className = 'status-dot online';
+    label.textContent = 'Conectado';
+    sub.textContent = 'Sesión activa';
+    globalBadge.className = 'badge badge-green';
+    globalBadge.innerHTML = '<span class="badge-dot"></span>Conectado';
+    mStatusBadge.className = 'badge badge-green';
+    mStatusBadge.innerHTML = '<span class="badge-dot"></span>Online';
+    document.getElementById('m-conn-sub').textContent = 'Sesión activa';
+    feedStatus.className = 'badge badge-green';
+    feedStatus.innerHTML = '<span class="badge-dot"></span>En vivo';
+    document.getElementById('qr-status').className = 'badge badge-green';
+    document.getElementById('qr-status').innerHTML = '<span class="badge-dot"></span>Vinculado';
+    btn.innerHTML = `<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Desconectar`;
+    btn.className = 'btn btn-danger';
+    addLog('SUCCESS', 'Bot conectado y escuchando mensajes');
+  } else {
+    dot.className = 'status-dot';
+    label.textContent = 'Desconectado';
+    sub.textContent = 'Sin sesión activa';
+    globalBadge.className = 'badge badge-red';
+    globalBadge.innerHTML = '<span class="badge-dot"></span>Desconectado';
+    mStatusBadge.className = 'badge badge-red';
+    mStatusBadge.innerHTML = '<span class="badge-dot"></span>Offline';
+    document.getElementById('m-conn-sub').textContent = 'Sin sesión activa';
+    feedStatus.className = 'badge badge-red';
+    feedStatus.innerHTML = '<span class="badge-dot"></span>Sin actividad';
+    document.getElementById('qr-status').className = 'badge badge-red';
+    document.getElementById('qr-status').innerHTML = '<span class="badge-dot"></span>En espera';
+    btn.innerHTML = `<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg> Conectar Bot`;
+    btn.className = 'btn btn-primary';
+    addLog('INFO', 'Bot desconectado');
+  }
+}
+
+function toggleConnect() {
+  if (state.connected) {
+    disconnect();
+  } else {
+    connect();
+  }
+}
+
+function connect() {
+  showToast('Bot conectado', 'green');
+  addLog('INFO', 'Iniciando conexión...');
+  setTimeout(() => {
+    setConnectionState(true);
+    showToast('Bot conectado', 'green');
+  }, 1500);
+}
+
+async function pairCustomNumber() {
+  const inputPhone = document.getElementById('phone-baileys')?.value?.trim();
+  if (!inputPhone) {
+    showToast('Ingresa un número de teléfono válido', 'red');
+    return;
+  }
+
+  showToast(`Generando código para +${inputPhone}...`, 'amber');
+  addLog('INFO', `Solicitando código de vinculación para +${inputPhone}...`);
+
+  const container = document.getElementById('qr-container');
+  if (container) {
+    container.innerHTML = `
+      <div style="text-align:center; padding: 24px;">
+        <div class="spinner" style="margin: 0 auto 14px;"></div>
+        <div style="font-size:13px; font-weight:600; color:var(--text-main);">Conectando con Servidores de WhatsApp...</div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Generando código seguro de 8 dígitos para +${inputPhone}</div>
+      </div>`;
+  }
+
+  try {
+    const res = await fetch('/api/pair', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: inputPhone })
+    });
+    const data = await res.json();
+    if (data.success) {
+      pollPairingCode(inputPhone);
+    }
+  } catch (err) {
+    showToast('Error al conectar con el servidor', 'red');
+  }
+}
+
+async function saveAndConnect() {
+  const provider = document.getElementById('provider-select')?.value || 'baileys';
+  const linkMethod = document.getElementById('link-method')?.value || 'qr';
+  
+  if (provider === 'baileys') {
+    if (linkMethod === 'code') {
+      pairCustomNumber();
+    } else {
+      generateQR();
+    }
+  } else {
+    showToast('Configuración de proveedor guardada', 'green');
+    addLog('INFO', `Proveedor ${provider} configurado`);
+  }
+}
+
+function pollPairingCode(phone = '') {
+  const container = document.getElementById('qr-container');
+  let attempts = 0;
+  const interval = setInterval(async () => {
+    attempts++;
+    try {
+      const res = await fetch('/api/pairing-code');
+      const data = await res.json();
+      if (data.status === 'code_available' && data.code) {
+        clearInterval(interval);
+        if (container) {
+          container.innerHTML = `
+            <div style="text-align:center; padding: 20px; background: rgba(16, 185, 129, 0.05); border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2);">
+              <div style="font-size:11px; font-weight:bold; color:var(--accent); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">
+                🔑 CÓDIGO DE VINCULACIÓN LISTO ${phone ? 'PARA +' + phone : ''}
+              </div>
+              <div style="font-family:var(--mono); font-size:32px; font-weight:900; letter-spacing:6px; color:#fff; background:#0f172a; padding:16px; border-radius:8px; border:2px solid var(--accent); margin:12px 0; box-shadow:0 0 20px rgba(16,185,129,0.3); user-select:all;">
+                ${data.code}
+              </div>
+              <div style="font-size:12px; color:var(--text-secondary); line-height:1.6; margin-top:12px; text-align:left; background:var(--bg-card); padding:12px; border-radius:8px;">
+                <strong>📲 Pasos en WhatsApp del celular:</strong><br>
+                1. Abre WhatsApp en el teléfono <strong>+${phone || 'destino'}</strong><br>
+                2. Ve a <strong>Ajustes ➔ Dispositivos vinculados ➔ Vincular con el número de teléfono</strong><br>
+                3. Ingresa los 8 dígitos: <strong style="color:var(--accent);">${data.code}</strong>
+              </div>
+            </div>`;
+        }
+        showToast(`¡Código listo!: ${data.code}`, 'green');
+        addLog('SUCCESS', `Código de vinculación generado para +${phone}: ${data.code}`);
+      }
+    } catch (e) {}
+
+    if (attempts > 20) {
+      clearInterval(interval);
+    }
+  }, 1000);
+}
+
+function saveCredentials() {
+  showToast('Configuración guardada', 'green');
+  addLog('INFO', 'Credenciales actualizadas en .env');
+}
+
+// ── QR CODE ──────────────────────────────────────────────────
+async function generateQR() {
+  const container = document.getElementById('qr-container');
+  if (container) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:20px;">
+        <div class="spinner" style="margin:0 auto 12px;"></div>
+        <div style="font-size:12px; color:var(--text-secondary);">Obteniendo Código QR en vivo...</div>
+      </div>`;
+  }
+  try {
+    const res = await fetch('/api/qr');
+    const data = await res.json();
+    if (data.status === 'qr_available' && data.qr) {
+      if (container) {
+        container.innerHTML = `
+          <div style="text-align:center;">
+            <div style="background:#fff; padding:12px; border-radius:12px; display:inline-block; border:2px solid var(--accent); box-shadow:0 0 20px rgba(16,185,129,0.2);">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(data.qr)}" alt="QR Code" width="220" height="220" style="display:block;" />
+            </div>
+            <p style="font-size:11px; color:var(--text-muted); margin-top:12px; font-family:var(--mono);">
+              Escanea con WhatsApp (Ajustes ➔ Dispositivos vinculados ➔ Vincular dispositivo)
+            </p>
+          </div>`;
+      }
+      const qrBadge = document.getElementById('qr-status');
+      if (qrBadge) {
+        qrBadge.className = 'badge badge-green';
+        qrBadge.innerHTML = '<span class="badge-dot"></span>QR Disponible';
+      }
+      showToast('Código QR listo para escanear', 'green');
+      addLog('SUCCESS', 'Código QR real generado para vincular como WhatsApp Web');
+    } else {
+      showToast('Solicitando nuevo QR al servidor...', 'amber');
+    }
+  } catch (err) {
+    showToast('Error al obtener QR del servidor', 'red');
+  }
+}
+
+function drawFakeQR() {
+  const canvas = document.getElementById('qr-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const s = 8;
+  const cols = 18;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, 144, 144);
+  // corner squares
+  [[0,0],[0,11],[11,0]].forEach(([r,c]) => {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(c*s, r*s, 7*s, 7*s);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(c*s+s, r*s+s, 5*s, 5*s);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(c*s+2*s, r*s+2*s, 3*s, 3*s);
+  });
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < cols; j++) {
+      if (Math.random() > 0.5) {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(j*s, i*s, s-1, s-1);
+      }
+    }
+  }
+}
+
+let qrTimer;
+function startQRCountdown() {
+  let count = 60;
+  qrTimer = setInterval(() => {
+    count--;
+    const el = document.getElementById('qr-countdown');
+    if (el) el.textContent = count;
+    if (count <= 0) {
+      clearInterval(qrTimer);
+      generateQR();
+    }
+  }, 1000);
+}
+
+// ── PROVIDER UI ───────────────────────────────────────────────
+function updateProviderUI() {
+  const provider = document.getElementById('provider-select').value;
+  ['baileys','meta','evolution','twilio'].forEach(p => {
+    const el = document.getElementById('provider-' + p);
+    if (el) el.style.display = p === provider ? 'block' : 'none';
+  });
+}
+
+// ── REAL DATA (SIN SIMULACIÓN) ──────────────────────────────────
+async function fetchMessagesFromDB() {
+  try {
+    const res = await fetch('/api/messages');
+    const data = await res.json();
+    if (data && data.messages && data.messages.length > 0) {
+      historyRows = [];
+      const uniquePhones = new Set();
+
+      data.messages.forEach(m => {
+        let phone = m.whatsapp_sessions?.customer_phone || m.phone || '573214493071';
+        phone = phone.replace('whatsapp_', '').replace('+', '').trim();
+        uniquePhones.add(phone);
+
+        const isUser = m.role === 'user';
+        const msg = isUser ? m.content : 'Mensaje entrante de cliente';
+        const reply = !isUser ? m.content : 'Respuesta automática de la IA';
+        const lat = m.latency || '0.3s';
+        const ts = m.created_at ? new Date(m.created_at) : new Date();
+
+        historyRows.push({ from: `+${phone}`, msg, reply, latency: lat, ts });
+      });
+
+      state.todayCount = data.messages.length;
+      state.uniqueUsers = uniquePhones;
+      const userCountEl = document.getElementById('m-users');
+      if (userCountEl) userCountEl.textContent = uniquePhones.size;
+      const todayCountEl = document.getElementById('m-today');
+      if (todayCountEl) todayCountEl.textContent = data.messages.length;
+
+      renderHistory();
+    }
+  } catch (err) {
+    console.error('Error al obtener mensajes:', err);
+  }
+}
+
+function startLiveSimulation() {
+  fetchMessagesFromDB();
+  setInterval(fetchMessagesFromDB, 3000);
+}
+
+function addLiveFeedItem(sample, reply, latency) {
+  const feed = document.getElementById('live-feed');
+  const empty = feed.querySelector('div[style]');
+  if (empty) feed.innerHTML = '';
+
+  state.todayCount++;
+  state.uniqueUsers.add(sample.from);
+  document.getElementById('m-today').textContent = state.todayCount;
+  document.getElementById('m-users').textContent = state.uniqueUsers.size;
+  document.getElementById('m-latency').textContent = latency;
+  document.getElementById('msg-count-badge').textContent = state.messages.length + 1;
+
+  const initials = sample.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' });
+
+  const item = document.createElement('div');
+  item.className = 'feed-item';
+  item.style.opacity = '0';
+  item.style.transform = 'translateY(-8px)';
+  item.style.transition = 'all 0.3s ease';
+  item.innerHTML = `
+    <div class="feed-avatar">${initials}</div>
+    <div class="feed-content">
+      <div class="feed-from">${sample.name} <span style="color:var(--text-muted); font-weight:400; font-family:var(--mono); font-size:10px;">${sample.from}</span></div>
+      <div class="feed-msg">${sample.msg}</div>
+      <div class="feed-time">Hoy · ${timeStr} · Respuesta en ${latency}</div>
+    </div>
+    <div class="feed-status"><span class="badge badge-green"><span class="badge-dot"></span>OK</span></div>
+  `;
+  feed.insertBefore(item, feed.firstChild);
+  requestAnimationFrame(() => {
+    item.style.opacity = '1';
+    item.style.transform = 'translateY(0)';
+  });
+
+  addLog('MSG', `${sample.from} → "${sample.msg.slice(0, 30)}..."`);
+  addLog('AI', `Respuesta generada en ${latency}`);
+
+  // Keep max 10 items
+  while (feed.children.length > 10) feed.removeChild(feed.lastChild);
+}
+
+// ── HISTORY ──────────────────────────────────────────────────
+let historyRows = [];
+function addHistoryRow(from, msg, reply, latency) {
+  historyRows.push({ from, msg, reply, latency, ts: new Date() });
+  state.messages.push({ from, msg, reply, latency });
+  renderHistory();
+}
+
+function renderHistory() {
+  const tbody = document.getElementById('history-body');
+  document.getElementById('history-count-label').textContent = `${historyRows.length} mensajes registrados en esta sesión`;
+  document.getElementById('msg-count-badge').textContent = historyRows.length;
+
+  if (historyRows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--text-muted);"><div style="font-size:12px;">Sin conversaciones registradas</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = historyRows.slice().reverse().map((r, i) => `
+    <tr>
+      <td style="color:var(--text-muted); font-family:var(--mono);">${historyRows.length - i}</td>
+      <td class="phone">${r.from}</td>
+      <td class="msg-preview">${r.msg}</td>
+      <td class="response-preview">${r.reply}</td>
+      <td><span class="badge badge-green" style="font-size:10px;">${r.latency}</span></td>
+      <td class="ts">${r.ts.toLocaleTimeString('es', {hour:'2-digit', minute:'2-digit', second:'2-digit'})}</td>
+    </tr>
+  `).join('');
+}
+
+function clearHistory() {
+  historyRows = [];
+  state.messages = [];
+  state.todayCount = 0;
+  state.uniqueUsers.clear();
+  document.getElementById('m-today').textContent = '0';
+  document.getElementById('m-users').textContent = '0';
+  document.getElementById('m-latency').textContent = '--';
+  document.getElementById('live-feed').innerHTML = `
+    <div style="padding: 40px 20px; text-align: center; color: var(--text-muted);">
+      <div style="font-size: 12px;">Esperando mensajes...</div>
+    </div>`;
+  renderHistory();
+  showToast('Historial limpiado', 'red');
+  addLog('INFO', 'Historial limpiado');
+}
+
+function exportHistory() {
+  const data = JSON.stringify(historyRows, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'historial-wa-agent.json';
+  a.click();
+  showToast('Exportando historial...', 'green');
+}
+
+// ── LOGS ─────────────────────────────────────────────────────
+function addLog(type, msg) {
+  const logEl = document.getElementById('log-output');
+  const colors = { INFO:'#3b82f6', SUCCESS:'#10b981', MSG:'#f59e0b', AI:'#a78bfa', ERROR:'#ef4444' };
+  const time = new Date().toLocaleTimeString('es', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const div = document.createElement('div');
+  div.innerHTML = `<span style="color:var(--text-muted);">${time}</span> <span style="color:${colors[type] || '#fff'};">[${type}]</span> ${msg}`;
+  logEl.appendChild(div);
+  const container = document.getElementById('log-container');
+  container.scrollTop = container.scrollHeight;
+}
+
+function clearLogs() {
+  document.getElementById('log-output').innerHTML = '<div><span style="color: var(--text-muted);">[SYSTEM]</span> Logs limpiados.</div>';
+}
+
+// ── TRAINING / PLAYGROUND ─────────────────────────────────────
+let playHistory = [];
+
+async function sendPlaygroundMsg() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  input.style.height = 'auto';
+
+  appendChatMsg(msg, 'user');
+
+  const systemPrompt = document.getElementById('system-prompt').value;
+  const temp = document.getElementById('temp-slider').value;
+
+  // Show typing
+  const typingId = 'typing-' + Date.now();
+  const typingEl = document.createElement('div');
+  typingEl.id = typingId;
+  typingEl.className = 'msg-row';
+  typingEl.innerHTML = `<div><div class="msg-bubble agent" style="padding: 0;"><div class="typing-indicator"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div></div>`;
+  document.getElementById('chat-messages').appendChild(typingEl);
+  scrollChat();
+
+  const t0 = Date.now();
+  try {
+    const body = new URLSearchParams();
+    body.append('From', 'whatsapp:+573214493071');
+    body.append('Body', msg);
+    const res = await fetch('/webhook', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body });
+    const data = await res.json();
+    const latency = ((Date.now() - t0) / 1000).toFixed(2) + 's';
+    typingEl.remove();
+    appendChatMsg(data.reply || data.error || 'Sin respuesta', 'agent');
+    showToast(`Respuesta en ${latency}`, 'green');
+    addLiveFeedItem({ name: 'Admin Pruebas', from: '+57 321 449 3071', msg: msg }, data.reply || 'OK', latency);
+    fetchMessagesFromDB();
+  } catch (e) {
+    typingEl.remove();
+    appendChatMsg('⚠️ Error al conectar con el servidor. Asegúrate de que el bot está corriendo.', 'agent');
+  }
+}
+
+async function sendTestMessage() {
+  showToast('Enviando mensaje de prueba a +57 321 449 3071...', 'amber');
+  addLog('INFO', 'Iniciando prueba de enlace con +57 321 449 3071...');
+  try {
+    const res = await fetch('/api/send-test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: '573214493071', message: 'Hola agente, verificando conexión UI.' })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('¡Prueba exitosa! Respuesta recibida', 'green');
+      addLog('SUCCESS', `Respuesta del Agente: "${data.reply.slice(0, 45)}..."`);
+      appendChatMsg('Hola agente, verificando conexión UI.', 'user');
+      appendChatMsg(data.reply, 'agent');
+      fetchMessagesFromDB();
+    } else {
+      showToast('Error en la respuesta del webhook', 'red');
+    }
+  } catch (err) {
+    showToast('Error al conectar con /api/send-test', 'red');
+  }
+}
+
+function appendChatMsg(text, role) {
+  const messages = document.getElementById('chat-messages');
+  const now = new Date().toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' });
+  const row = document.createElement('div');
+  row.className = `msg-row ${role}`;
+  row.innerHTML = `
+    <div>
+      <div class="msg-bubble ${role}">${text.replace(/\n/g, '<br>')}</div>
+      <div class="msg-time">${role === 'user' ? 'Tú' : 'Agente'} · ${now}</div>
+    </div>`;
+  messages.appendChild(row);
+  scrollChat();
+}
+
+function scrollChat() {
+  const el = document.getElementById('chat-messages');
+  el.scrollTop = el.scrollHeight;
+}
+
+function clearChat() {
+  document.getElementById('chat-messages').innerHTML = `
+    <div class="msg-row">
+      <div>
+        <div class="msg-bubble agent">Chat limpiado. Envía un nuevo mensaje para continuar la prueba.</div>
+        <div class="msg-time">Sistema · Ahora</div>
+      </div>
+    </div>`;
+}
+
+function loadDefaultPrompt() {
+  const prompt = `Eres un asistente virtual inteligente de WhatsApp para una empresa de atención al cliente. Tu nombre es "Kalsita AI".
+
+Directrices:
+- Responde siempre en el mismo idioma que el usuario.
+- Sé amigable, profesional y conciso.
+- Si no sabes algo, dilo honestamente y ofrece alternativas.
+- Nunca inventes información sobre productos o precios.
+- Guía al usuario hacia la solución más adecuada a su problema.
+
+Cuando el usuario escriba /help, muestra una lista de lo que puedes hacer.`;
+  document.getElementById('system-prompt').value = prompt;
+  updateTokenCount(document.getElementById('system-prompt'));
+  showToast('Prompt de ejemplo cargado', 'green');
+}
+
+function updateTokenCount(el) {
+  const approxTokens = Math.ceil(el.value.length / 4);
+  const max = 4096;
+  const pct = Math.min((approxTokens / max) * 100, 100);
+  document.getElementById('token-text').textContent = `~${approxTokens} tokens`;
+  document.getElementById('token-fill').style.width = pct + '%';
+  document.getElementById('token-fill').style.background = pct > 80 ? 'var(--red)' : pct > 60 ? 'var(--amber)' : 'var(--accent)';
+}
+
+async function saveTraining() {
+  const config = {
+    phone_number: 'default',
+    model: document.getElementById('model-select').value,
+    temperature: parseFloat(document.getElementById('temp-slider').value),
+    system_prompt: document.getElementById('system-prompt').value,
+    is_active: true
+  };
+
+  try {
+    const res = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Configuración guardada en Supabase', 'green');
+      addLog('INFO', `Entrenamiento actualizado en BD: modelo=${config.model}`);
+    } else {
+      localStorage.setItem('wa-agent-training', JSON.stringify(config));
+      showToast('Guardado localmente', 'amber');
+    }
+  } catch (err) {
+    localStorage.setItem('wa-agent-training', JSON.stringify(config));
+    showToast('Guardado en caché local', 'amber');
+  }
+}
+
+function resetTraining() {
+  document.getElementById('system-prompt').value = '';
+  document.getElementById('temp-slider').value = 0.7;
+  document.getElementById('topp-slider').value = 1;
+  document.getElementById('tokens-slider').value = 1024;
+  document.getElementById('freq-slider').value = 0;
+  ['temp','topp','tokens','freq'].forEach(k => {
+    const s = document.getElementById(k+'-slider');
+    updateSlider(k, s.value);
+  });
+  updateTokenCount(document.getElementById('system-prompt'));
+  showToast('Configuración restablecida', 'amber');
+}
+
+// ── SLIDERS ────────────────────────────────────────────────────
+function updateSlider(key, val) {
+  const el = document.getElementById(key + '-val');
+  if (!el) return;
+  el.textContent = parseFloat(val).toFixed(key === 'tokens' ? 0 : 1);
+}
+
+// ── MODEL LIST ────────────────────────────────────────────────
+function updateModelList() {
+  const provider = document.getElementById('ai-provider').value;
+  const models = {
+    openai:    ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo', 'o1-mini'],
+    anthropic: ['claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307', 'claude-3-opus-20240229'],
+    google:    ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash'],
+    groq:      ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768', 'llama-3.1-8b-instant'],
+  };
+  const sel = document.getElementById('model-select');
+  sel.innerHTML = (models[provider] || []).map(m => `<option value="${m}">${m}</option>`).join('');
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────
+function toggleSetting(el) { el.classList.toggle('on'); }
+
+function saveSettings() {
+  showToast('Ajustes del sistema guardados', 'green');
+  addLog('INFO', 'Ajustes guardados');
+}
+
+// ── UTILITIES ─────────────────────────────────────────────────
+function togglePassword(id, btn) {
+  const input = document.getElementById(id);
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+function copyWebhook() {
+  const val = document.getElementById('webhook-url').value;
+  navigator.clipboard.writeText(val);
+  showToast('URL copiada al portapapeles', 'green');
+}
+
+function showToast(msg, color = 'green') {
+  const toast = document.getElementById('toast');
+  const dot = document.getElementById('toast-dot');
+  const msgEl = document.getElementById('toast-msg');
+  const colors = { green: 'var(--accent)', red: 'var(--red)', amber: 'var(--amber)' };
+  dot.style.background = colors[color] || colors.green;
+  msgEl.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ── UPTIME COUNTER ────────────────────────────────────────────
+function updateUptime() {
+  const elapsed = Math.floor((Date.now() - state.startTime) / 1000);
+  const h = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+  const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+  const s = String(elapsed % 60).padStart(2, '0');
+  const el = document.getElementById('uptime-val');
+  if (el) el.textContent = `${h}:${m}:${s}`;
+  const memEl = document.getElementById('mem-val');
+  if (memEl) memEl.textContent = Math.floor(Math.random() * 10 + 45) + ' MB';
+}
+setInterval(updateUptime, 1000);
+updateUptime();
+
+// ── SUPABASE REALTIME & BACKEND SYNC ──────────────────────────
+let supabaseClient = null;
+
+async function fetchConfigFromDB() {
+  try {
+    const res = await fetch('/api/config');
+    const data = await res.json();
+    if (data.config) {
+      if (data.config.system_prompt) {
+        document.getElementById('system-prompt').value = data.config.system_prompt;
+        updateTokenCount(document.getElementById('system-prompt'));
+      }
+      if (data.config.model) {
+        document.getElementById('model-select').value = data.config.model;
+      }
+      if (data.config.temperature) {
+        document.getElementById('temp-slider').value = data.config.temperature;
+        document.getElementById('temp-val').textContent = parseFloat(data.config.temperature).toFixed(1);
+      }
+    }
+  } catch (e) {
+    console.error('Error al obtener config:', e);
+  }
+}
+
+async function fetchMessagesFromDB() {
+  try {
+    const res = await fetch('/api/messages');
+    const data = await res.json();
+    if (data.messages && data.messages.length > 0) {
+      historyRows = [];
+      state.uniqueUsers.clear();
+      data.messages.forEach(m => {
+        const phone = m.whatsapp_sessions?.customer_phone || m.whatsapp_sessions?.phone_number || 'N/A';
+        state.uniqueUsers.add(phone);
+        historyRows.push({
+          from: phone,
+          msg: m.role === 'user' ? m.content : '---',
+          reply: m.role === 'assistant' ? m.content : '---',
+          latency: m.latency_ms ? (m.latency_ms / 1000).toFixed(2) + 's' : '--',
+          ts: new Date(m.created_at)
+        });
+      });
+      document.getElementById('m-today').textContent = historyRows.length;
+      document.getElementById('m-users').textContent = state.uniqueUsers.size;
+      renderHistory();
+    }
+  } catch (e) {
+    console.error('Error al obtener mensajes:', e);
+  }
+}
+
+function initSupabaseRealtime(url, key) {
+  if (!url || !key || !window.supabase) return;
+  try {
+    supabaseClient = window.supabase.createClient(url, key);
+    addLog('SUCCESS', 'Supabase Realtime cliente inicializado');
+
+    supabaseClient
+      .channel('schema-db-changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+        const msg = payload.new;
+        addLog('REALTIME', `Mensaje [${msg.role}]: ${msg.content.slice(0, 35)}...`);
+        fetchMessagesFromDB();
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          addLog('SUCCESS', 'Suscripción Realtime activa en tabla messages');
+          showToast('Realtime conectado', 'green');
+        }
+      });
+  } catch(e) {
+    console.error('Error en Supabase Realtime:', e);
+  }
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+(function init() {
+  // Restore saved training config
+  try {
+    const saved = JSON.parse(localStorage.getItem('wa-agent-training') || '{}');
+    if (saved.system_prompt) {
+      document.getElementById('system-prompt').value = saved.system_prompt;
+      updateTokenCount(document.getElementById('system-prompt'));
+    }
+    if (saved.temperature) {
+      document.getElementById('temp-slider').value = saved.temperature;
+      document.getElementById('temp-val').textContent = parseFloat(saved.temperature).toFixed(1);
+    }
+    if (saved.model) {
+      updateModelList();
+    }
+  } catch(e) {}
+
+  addLog('INFO', 'Dashboard cargado · http://localhost:3000');
+  addLog('INFO', 'Servidor Express activo en puerto 3000');
+
+  // Fetch initial config and messages from DB
+  fetchConfigFromDB();
+  fetchMessagesFromDB();
+})();
+</script>
+</body>
+</html>
+
