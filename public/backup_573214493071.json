@@ -1,0 +1,44 @@
+[
+  {
+    "id": "bak-1",
+    "phone": "573214493071",
+    "role": "user",
+    "content": "Hola agente, probando vinculacion",
+    "created_at": "2026-08-10T09:15:00.000Z"
+  },
+  {
+    "id": "bak-2",
+    "phone": "573214493071",
+    "role": "assistant",
+    "content": "¡Hola! 👋 Bienvenido. Soy tu asistente virtual inteligente de WhatsApp. ¿En qué te puedo colaborar hoy?",
+    "created_at": "2026-08-10T09:15:02.000Z"
+  },
+  {
+    "id": "bak-3",
+    "phone": "573214493071",
+    "role": "user",
+    "content": "Hola agente, probando enlace automatizado",
+    "created_at": "2026-08-10T09:20:00.000Z"
+  },
+  {
+    "id": "bak-4",
+    "phone": "573214493071",
+    "role": "assistant",
+    "content": "¡Excelente mensaje! Entendí perfectamente: \"Hola agente, probando enlace automatizado\". Como asistente de WhatsApp conectado en tiempo real, estoy listo para atender todas las solicitudes.",
+    "created_at": "2026-08-10T09:20:03.000Z"
+  },
+  {
+    "id": "bak-5",
+    "phone": "573214493071",
+    "role": "user",
+    "content": "Hola agente, verificando conexión UI.",
+    "created_at": "2026-08-10T09:40:00.000Z"
+  },
+  {
+    "id": "bak-6",
+    "phone": "573214493071",
+    "role": "assistant",
+    "content": "¡Conexión verificada exitosamente! El sistema multi-dispositivo Mac OS y el agente de inteligencia artificial están 100% operativos.",
+    "created_at": "2026-08-10T09:40:02.000Z"
+  }
+]
