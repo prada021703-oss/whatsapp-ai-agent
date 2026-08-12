@@ -1,0 +1,66 @@
+[
+  {
+    "role": "user",
+    "content": "Hola agente, probando vinculacion"
+  },
+  {
+    "role": "assistant",
+    "content": "[Error de IA]: 401 Incorrect API key provided: sk-proj-.... You can find your API key at https://platform.openai.com/account/api-keys."
+  },
+  {
+    "role": "user",
+    "content": "Hola agente, probando vinculacion"
+  },
+  {
+    "role": "assistant",
+    "content": "[Agente WA Conectado] Recibí tu mensaje: \"Hola agente, probando vinculacion\". La vinculación entre WhatsApp y el Agente está funcional. (Agrega tus API Keys reales en .env para respuestas de IA de producción)."
+  },
+  {
+    "role": "user",
+    "content": "Hola agente, probando enlace automatizado"
+  },
+  {
+    "role": "assistant",
+    "content": "[Agente WA Conectado] Recibí tu mensaje: \"Hola agente, probando enlace automatizado\". La vinculación entre WhatsApp y el Agente está funcional. (Agrega tus API Keys reales en .env para respuestas de IA de producción)."
+  },
+  {
+    "role": "user",
+    "content": "Hola agente, probando enlace automatizado"
+  },
+  {
+    "role": "assistant",
+    "content": "[Agente WA Conectado] Recibí tu mensaje: \"Hola agente, probando enlace automatizado\". La vinculación entre WhatsApp y el Agente está funcional. (Agrega tus API Keys reales en .env para respuestas de IA de producción)."
+  },
+  {
+    "role": "user",
+    "content": "Hola agente, probando enlace automatizado"
+  },
+  {
+    "role": "assistant",
+    "content": "[Agente WA Conectado] Recibí tu mensaje: \"Hola agente, probando enlace automatizado\". La vinculación entre WhatsApp y el Agente está funcional. (Agrega tus API Keys reales en .env para respuestas de IA de producción)."
+  },
+  {
+    "role": "user",
+    "content": "Hola agente, probando enlace automatizado"
+  },
+  {
+    "role": "assistant",
+    "content": "[Agente WA Conectado] Recibí tu mensaje: \"Hola agente, probando enlace automatizado\". La vinculación entre WhatsApp y el Agente está funcional. (Agrega tus API Keys reales en .env para respuestas de IA de producción)."
+  },
+  {
+    "role": "user",
+    "content": "Hola agente, verificando conexión UI."
+  },
+  {
+    "role": "assistant",
+    "content": "[Agente WA Conectado] Recibí tu mensaje: \"Hola agente, verificando conexión UI.\". La vinculación entre WhatsApp y el Agente está funcional. (Agrega tus API Keys reales en .env para respuestas de IA de producción)."
+  },
+  {
+    "role": "user",
+    "content": "Hola agente, verificando conexión UI."
+  },
+  {
+    "role": "assistant",
+    "content": "[Agente WA Conectado] Recibí tu mensaje: \"Hola agente, verificando conexión UI.\". La vinculación entre WhatsApp y el Agente está funcional. (Agrega tus API Keys reales en .env para respuestas de IA de producción)."
+  }
+]
