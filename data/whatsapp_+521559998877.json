@@ -1,0 +1,26 @@
+[
+  {
+    "role": "user",
+    "content": "Hola agente de WhatsApp"
+  },
+  {
+    "role": "assistant",
+    "content": "[Modo Demostración] Recibí tu mensaje: \"Hola agente de WhatsApp\". Configura tu OPENAI_API_KEY en .env para respuestas reales del modelo claude-3-5-sonnet."
+  },
+  {
+    "role": "user",
+    "content": "Hola desde TypeScript interfaces"
+  },
+  {
+    "role": "assistant",
+    "content": "[Modo Demostración] Recibí tu mensaje: \"Hola desde TypeScript interfaces\". Configura tu OPENAI_API_KEY en .env para respuestas reales del modelo claude-3-5-sonnet."
+  },
+  {
+    "role": "user",
+    "content": "Hola supabaseAdmin"
+  },
+  {
+    "role": "assistant",
+    "content": "[Modo Demostración] Recibí tu mensaje: \"Hola supabaseAdmin\". Configura tu OPENAI_API_KEY en .env para respuestas reales del modelo claude-3-5-sonnet."
+  }
+]
